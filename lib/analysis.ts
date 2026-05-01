@@ -261,6 +261,119 @@ function smartMoneyScore(prices: PriceData[]): { score: number; reasons: string[
       reasons.push("Volume สูงมาก + ราคาลง");
     }
   }
+// ========== TRADE PLAN CALCULATOR ==========
+
+export interface TradePlan {
+  entry: number;
+  tp1: number;
+  tp2: number;
+  tp3: number;
+  sl: number;
+  riskReward: number;
+  riskPercent: number;
+  positionSize: number;
+  recommendation: string;
+}
+
+export function calculateTradePlan(
+  prices: PriceData[],
+  signal: string,
+  confidence: number
+): TradePlan {
+  const latest = prices[prices.length - 1];
+  const entry = latest.close;
+  
+  // คำนวณ ATR (Average True Range) ง่าย ๆ
+  const atr = calculateATR(prices, 14);
+  
+  // SL = 1.5x ATR
+  const slDistance = atr * 1.5;
+  
+  // กำหนด SL ตามสัญญาณ
+  let sl: number;
+  if (signal.includes('BUY')) {
+    sl = entry - slDistance;
+  } else if (signal.includes('SELL')) {
+    sl = entry + slDistance;
+  } else {
+    // WAIT ไม่มี SL
+    sl = entry;
+  }
+  
+  // TP ใช้อัตราส่วน Risk:Reward
+  // TP1 = 1:2, TP2 = 1:3, TP3 = 1:4
+  let tp1: number, tp2: number, tp3: number;
+  
+  if (signal.includes('BUY')) {
+    tp1 = entry + (slDistance * 2);
+    tp2 = entry + (slDistance * 3);
+    tp3 = entry + (slDistance * 4);
+  } else if (signal.includes('SELL')) {
+    tp1 = entry - (slDistance * 2);
+    tp2 = entry - (slDistance * 3);
+    tp3 = entry - (slDistance * 4);
+  } else {
+    tp1 = tp2 = tp3 = entry;
+  }
+  
+  // คำนวณ Risk/Reward
+  const risk = Math.abs(entry - sl);
+  const reward = Math.abs(tp1 - entry);
+  const riskReward = risk > 0 ? reward / risk : 0;
+  
+  // คำนวณ % ความเสี่ยง
+  const riskPercent = (risk / entry) * 100;
+  
+  // ขนาดลงทุนแนะนำ (สมมติพอร์ต $10,000 ความเสี่ยง 2%)
+  const portfolio = 10000;
+  const maxRisk = portfolio * 0.02; // 2%
+  const positionSize = risk > 0 ? maxRisk / risk * entry : 0;
+  
+  // คำแนะนำ
+  let recommendation = '';
+  if (signal.includes('BUY')) {
+    if (confidence >= 70) recommendation = 'เข้าเต็มจำนวน';
+    else if (confidence >= 50) recommendation = 'เข้าครึ่งจำนวน';
+    else recommendation = 'รอจังหวะ';
+  } else if (signal.includes('SELL')) {
+    if (confidence >= 70) recommendation = 'เทขายเต็มจำนวน';
+    else if (confidence >= 50) recommendation = 'เทขายครึ่งจำนวน';
+    else recommendation = 'รอจังหวะ';
+  } else {
+    recommendation = 'ยังไม่มีสัญญาณชัดเจน';
+  }
+  
+  return {
+    entry,
+    tp1,
+    tp2,
+    tp3,
+    sl,
+    riskReward,
+    riskPercent,
+    positionSize,
+    recommendation
+  };
+}
+
+function calculateATR(prices: PriceData[], period: number = 14): number {
+  const trValues: number[] = [];
+  
+  for (let i = 1; i < prices.length; i++) {
+    const high = prices[i].high;
+    const low = prices[i].low;
+    const prevClose = prices[i-1].close;
+    
+    const tr1 = high - low;
+    const tr2 = Math.abs(high - prevClose);
+    const tr3 = Math.abs(low - prevClose);
+    
+    trValues.push(Math.max(tr1, tr2, tr3));
+  }
+  
+  const recentTR = trValues.slice(-period);
+  return recentTR.reduce((a, b) => a + b, 0) / recentTR.length;
+}
   
   const last3 = prices.slice(-3);
   const allUp = last3.every((p, i) => i === 0 || p.close > last3[i-1].close);
