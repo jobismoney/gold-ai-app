@@ -1,4 +1,5 @@
 import AIScore from '@/components/AIScore';
+import TradePlan from '@/components/TradePlan';
 import { analyzeGold } from '@/lib/analysis';
 
 async function getGoldData() {
@@ -33,10 +34,9 @@ export default async function Home() {
   
   if (prices.length === 0) {
     return (
-      <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl text-red-400 mb-4 font-bold">ไม่สามารถดึงข้อมูลได้</h1>
+      <main className="min-h-screen bg-black text-white p-8 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl text-red-400 mb-4">ไม่สามารถดึงข้อมูลได้</h1>
           <p className="text-gray-400">กรุณาลองใหม่ภายหลัง</p>
         </div>
       </main>
@@ -50,19 +50,85 @@ export default async function Home() {
   const changePercent = (change / prev.close) * 100;
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      {/* Header */}
-      <header className="border-b border-gray-800 bg-neutral-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold gradient-text">
-                Gold AI App Pro
-              </h1>
-              <p className="text-gray-400 text-sm mt-1">วิเคราะห์ทองคำด้วย AI - คิดเหมือน Smart Money</p>
+    <main className="min-h-screen bg-black text-white p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+            Gold AI App Pro
+          </h1>
+          <p className="text-gray-400 mt-2">วิเคราะห์ทองคำด้วย AI - คิดเหมือน Smart Money</p>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Price Card */}
+            <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+              <h2 className="text-xl font-bold text-white mb-4">ราคาทองคำล่าสุด</h2>
+              <div className="flex items-baseline gap-4 mb-4">
+                <div className="text-4xl font-bold text-yellow-400">
+                  ${latest.close.toFixed(2)}
+                </div>
+                <div className={`text-lg ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {change >= 0 ? '+' : ''}{change.toFixed(2)} ({changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%)
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-gray-500">เปิด</div>
+                  <div className="text-white">${latest.open.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">สูงสุด</div>
+                  <div className="text-green-400">${latest.high.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">ต่ำสุด</div>
+                  <div className="text-red-400">${latest.low.toFixed(2)}</div>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-xs text-gray-500">อัปเดตล่าสุด</div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 text-center">
+                <div className="text-2xl mb-1">📊</div>
+                <div className="text-xs text-gray-500">RSI</div>
+                <div className={`text-lg font-bold ${analysis.indicators.rsi < 30 ? 'text-green-400' : analysis.indicators.rsi > 70 ? 'text-red-400' : 'text-white'}`}>
+                  {analysis.indicators.rsi.toFixed(1)}
+                </div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 text-center">
+                <div className="text-2xl mb-1">📈</div>
+                <div className="text-xs text-gray-500">MACD</div>
+                <div className={`text-lg font-bold ${analysis.indicators.macd > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {analysis.indicators.macd > 0 ? '+' : ''}{analysis.indicators.macd.toFixed(1)}
+                </div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 text-center">
+                <div className="text-2xl mb-1">🎯</div>
+                <div className="text-xs text-gray-500">แนวรับ</div>
+                <div className="text-lg font-bold text-white">${analysis.indicators.bbLower.toFixed(0)}</div>
+              </div>
+              <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 text-center">
+                <div className="text-2xl mb-1">🚀</div>
+                <div className="text-xs text-gray-500">แนวต้าน</div>
+                <div className="text-lg font-bold text-white">${analysis.indicators.bbUpper.toFixed(0)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="lg:col-span-1 space-y-6">
+            <AIScore analysis={analysis} />
+            <TradePlan tradePlan={analysis.tradePlan} signal={analysis.decision} />
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}              <div className="text-xs text-gray-500">อัปเดตล่าสุด</div>
               <div className="text-sm text-gray-300">{latest.date}</div>
             </div>
           </div>
